@@ -2,6 +2,4 @@
 __pycache__/
 *.pyc
 *.pt
-# *.png  — fingerprint_sample.png 필요
-*.json
 .ipynb_checkpoints/

@@ -1,0 +1,11 @@
+{
+  "corr_baseline": 0.600420316428518,
+  "corr_optimal": 0.5522462017095956,
+  "improvement_pct": -8.023398509476936,
+  "angles_tested": [
+    0,
+    10,
+    20,
+    30
+  ]
+}

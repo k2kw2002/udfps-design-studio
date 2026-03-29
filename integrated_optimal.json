@@ -1,0 +1,59 @@
+{
+  "design": {
+    "d_scales": [
+      0.7,
+      1.3,
+      0.7,
+      1.3
+    ],
+    "d_thick_um": [
+      0.03465,
+      0.025869999999999997,
+      0.02072,
+      0.16952000000000003
+    ],
+    "delta_bm_um": -20.0,
+    "layer_materials": [
+      "SiO2",
+      "TiO2",
+      "SiO2",
+      "TiO2"
+    ],
+    "layer_n": [
+      1.46,
+      2.35,
+      1.46,
+      2.35
+    ]
+  },
+  "performance": {
+    "MTF": 0.9978485727323912,
+    "T_total": 0.07320898110963618,
+    "skewness": 0.07518835839150453,
+    "abs_skewness": 0.07518835839150453
+  },
+  "baseline": {
+    "MTF": 0.9965317224147188,
+    "T_total": 0.07255763238691734,
+    "skewness": 0.17061327334042456
+  },
+  "optimization": {
+    "n_init": 40,
+    "n_iter": 20,
+    "batch_q": 3,
+    "total_evals": 100,
+    "final_hypervolume": 0.46369033771973744,
+    "theta_deg": 30.0
+  },
+  "parameters": {
+    "wavelength_um": 0.85,
+    "CG_thick_um": 550.0,
+    "n_CG": 1.52,
+    "w1_um": 30.0,
+    "w2_um": 40.0,
+    "t_BM_um": 10.0,
+    "d_int_um": 20.0,
+    "grid_N": 512,
+    "grid_L_um": 600.0
+  }
+}

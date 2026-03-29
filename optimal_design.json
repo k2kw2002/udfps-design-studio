@@ -1,0 +1,68 @@
+{
+  "optimization": "qNEHVI",
+  "theta_deg": 30.0,
+  "coating": "Gorilla DX (4-layer)",
+  "best_design": {
+    "d_scales": [
+      1.192731714290286,
+      0.9457051539281395,
+      1.2474536332031458,
+      1.2460744180313787
+    ],
+    "thickness_nm": [
+      59.04021985736916,
+      18.81953256316997,
+      36.92462754281311,
+      162.4881041112918
+    ],
+    "layers": [
+      {
+        "material": "SiO2",
+        "thickness_nm": 59.04021985736916
+      },
+      {
+        "material": "TiO2",
+        "thickness_nm": 18.81953256316997
+      },
+      {
+        "material": "SiO2",
+        "thickness_nm": 36.92462754281311
+      },
+      {
+        "material": "TiO2",
+        "thickness_nm": 162.4881041112918
+      }
+    ]
+  },
+  "performance": {
+    "MTF_ridge": 0.6268258094787598,
+    "T_total": 65.46751403808594,
+    "skewness": 0.0020233227405697107
+  },
+  "baseline_performance": {
+    "MTF_ridge": 0.6268256902694702,
+    "T_total": 41.59812455160352,
+    "skewness": 0.00202344823628664
+  },
+  "pareto_count": 7,
+  "hv_final": 0.13873680161729224,
+  "bm_optimization": {
+    "delta_BM_um": 30.0,
+    "skewness_pinn": 0.0926,
+    "skewness_initial": -0.354,
+    "improvement_pct": 73.8,
+    "target_achieved": true
+  },
+  "final_summary": {
+    "coating_thickness_nm": [
+      59.04021985736916,
+      18.81953256316997,
+      36.92462754281311,
+      162.4881041112918
+    ],
+    "delta_BM_um": 30.0,
+    "T_total_improvement_pct": 57.4,
+    "skewness_final": 0.0926,
+    "all_targets_met": true
+  }
+}

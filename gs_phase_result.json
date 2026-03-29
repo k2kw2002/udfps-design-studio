@@ -1,0 +1,31 @@
+{
+  "method": "Gerchberg-Saxton",
+  "n_iter": 500,
+  "propagation_um": 550.0,
+  "n_medium": 1.52,
+  "wavelength_um": 0.85,
+  "coating": "Gorilla DX 최적",
+  "angle_results": [
+    {
+      "theta": 0,
+      "kx_err": 4.6267319329138926e-05,
+      "rmse_deg": 0.7104791318696982
+    },
+    {
+      "theta": 10,
+      "kx_err": 1.265719513308666,
+      "rmse_deg": 68.39104032169875
+    },
+    {
+      "theta": 20,
+      "kx_err": 2.543061996903715,
+      "rmse_deg": 77.15648266924404
+    },
+    {
+      "theta": 30,
+      "kx_err": 3.7049899234810897,
+      "rmse_deg": 80.16898796090918
+    }
+  ],
+  "avg_rmse_deg": 56.606747520930426
+}
