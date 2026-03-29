@@ -17,7 +17,21 @@ st.set_page_config(
     initial_sidebar_state='expanded'
 )
 
-plt.rcParams['font.family'] = ['Malgun Gothic', 'DejaVu Sans']
+# 한글 폰트 설정 (Streamlit Cloud 호환)
+import platform, subprocess as _sp, os as _os
+if platform.system() != 'Windows':
+    # Linux (Streamlit Cloud): Noto Sans KR 설치
+    _font_dir = _os.path.expanduser('~/.fonts')
+    if not _os.path.exists(_os.path.join(_font_dir, 'NotoSansKR-Regular.ttf')):
+        _os.makedirs(_font_dir, exist_ok=True)
+        _sp.run(['wget', '-q', '-O', _os.path.join(_font_dir, 'NotoSansKR-Regular.ttf'),
+                 'https://github.com/google/fonts/raw/main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf'],
+                check=False)
+        import matplotlib.font_manager as fm
+        fm.fontManager.addfont(_os.path.join(_font_dir, 'NotoSansKR-Regular.ttf'))
+    plt.rcParams['font.family'] = ['Noto Sans KR', 'DejaVu Sans']
+else:
+    plt.rcParams['font.family'] = ['Malgun Gothic', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
 # ── 물리 함수 ─────────────────────────────────────────────────────────────
@@ -149,11 +163,12 @@ if 'design_history' not in st.session_state:
     st.session_state['design_history'] = []
 
 # ── 탭 구성 (8개) ────────────────────────────────────────────────────────
-tab1, tab2, tab7, tab8, tab3, tab4, tab5, tab6, tab9 = st.tabs([
+tab1, tab2, tab7, tab8, tab3, tab4, tab5, tab10, tab6, tab9 = st.tabs([
     '1. 아키텍처', '2. 설계',
     '3. 다각도 Robustness', '4. 민감도 분석',
     '5. 데이터 흐름', '6. 핵심 수식',
-    '7. Pareto 탐색기', '8. 로드맵', '9. 설계 이력'
+    '7. Pareto 탐색기', '8. 지문 시뮬레이션',
+    '9. 로드맵', '10. 설계 이력'
 ])
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -801,7 +816,114 @@ with tab5:
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# 탭 6: 로드맵
+# 탭 8: 지문 시뮬레이션
+# ══════════════════════════════════════════════════════════════════════════
+with tab10:
+    st.header('지문 이미지 시뮬레이션')
+    st.markdown('> 실제 UDFPS 센서에서 보이는 지문 이미지를 시뮬레이션합니다')
+
+    # 지문 이미지 로드
+    fp_path = 'fingerprint_sample.png'
+    if os.path.exists(fp_path):
+        from PIL import Image
+
+        FP_SIZE = 128
+        FP_PIXEL_UM = 8.0
+        FP_FOV = FP_SIZE * FP_PIXEL_UM
+
+        img_raw = Image.open(fp_path).convert('L')
+        img_rs = img_raw.resize((FP_SIZE, FP_SIZE), Image.LANCZOS)
+        fp_2d = np.array(img_rs, dtype=np.float64) / 255.0
+        if fp_2d.mean() > 0.5:
+            fp_2d = 1.0 - fp_2d
+
+        # 현재 사이드바 설계 변수 사용
+        d_sc_fp = d_scales
+        db_fp = delta_bm
+        th_fp = theta
+
+        # 입사각별 1D PSF 계산 (0~35도, 5도 간격)
+        theta_fp_range = range(0, 36, 5)
+        psf_fp_base = {}
+        psf_fp_cur = {}
+        for th_i in theta_fp_range:
+            rb = full_pipeline(np.ones(n_layers), 0.0, float(th_i),
+                               w1=w1, w2=w2, coating_preset=coating_type)
+            rc = full_pipeline(d_sc_fp, db_fp, float(th_i),
+                               w1=w1, w2=w2, coating_preset=coating_type)
+            psf_fp_base[th_i] = rb['PSF']
+            psf_fp_cur[th_i] = rc['PSF']
+
+        # 센서 시뮬레이션 (행별로 해당 각도 PSF 적용)
+        STACK_H = 600.0
+
+        def sim_sensor(fp, psf_dict):
+            ny, nx = fp.shape
+            cy = ny // 2
+            result = np.zeros_like(fp)
+            for row in range(ny):
+                dy = abs(row - cy) * FP_PIXEL_UM
+                th_r = min(35, np.degrees(np.arctan(dy / STACK_H)))
+                th_key = int(5 * round(th_r / 5))
+                th_key = min(th_key, max(psf_dict.keys()))
+                psf_1d = np.abs(psf_dict[th_key])
+                c = len(psf_1d) // 2
+                hw = min(30, c)
+                k = psf_1d[c-hw:c+hw+1]
+                if k.sum() > 0:
+                    k = k / k.sum()
+                result[row] = np.convolve(fp[row], k, mode='same')
+            if result.max() > 0:
+                result /= result.max()
+            return result
+
+        sensor_base_fp = sim_sensor(fp_2d, psf_fp_base)
+        sensor_cur_fp = sim_sensor(fp_2d, psf_fp_cur)
+
+        # 시각화
+        ext_fp = [-FP_FOV/2, FP_FOV/2, -FP_FOV/2, FP_FOV/2]
+
+        fig, axes = plt.subplots(1, 4, figsize=(18, 5))
+        fig.suptitle(f'UDFPS 센서 지문 이미지  ({coating_type}, theta={th_fp}deg)',
+                     fontsize=14, fontweight='bold')
+
+        axes[0].imshow(fp_2d, cmap='gray', extent=ext_fp, origin='lower')
+        axes[0].set_title('원본 지문\n(이상적)', fontsize=12, fontweight='bold')
+
+        axes[1].imshow(sensor_base_fp, cmap='gray', extent=ext_fp, origin='lower')
+        axes[1].set_title('기준 설계\n(delta=0)', fontsize=12, fontweight='bold', color='red')
+
+        axes[2].imshow(sensor_cur_fp, cmap='gray', extent=ext_fp, origin='lower')
+        axes[2].set_title('현재 설계\n(사이드바 값)', fontsize=12, fontweight='bold', color='green')
+
+        diff_fp = np.abs(sensor_cur_fp - sensor_base_fp)
+        im_d = axes[3].imshow(diff_fp, cmap='hot', extent=ext_fp, origin='lower')
+        axes[3].set_title('차이 맵', fontsize=12, fontweight='bold')
+        plt.colorbar(im_d, ax=axes[3], shrink=0.8)
+
+        for ax in axes:
+            ax.set_xlabel('x (um)')
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close()
+
+        # 정량 비교
+        corr_b = float(np.corrcoef(fp_2d.ravel(), sensor_base_fp.ravel())[0, 1])
+        corr_c = float(np.corrcoef(fp_2d.ravel(), sensor_cur_fp.ravel())[0, 1])
+        imp_fp = (corr_c - corr_b) / max(abs(corr_b), 1e-10) * 100
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric('기준 설계 상관계수', f'{corr_b:.4f}')
+        c2.metric('현재 설계 상관계수', f'{corr_c:.4f}',
+                  f'{imp_fp:+.1f}%')
+        c3.metric('지문 선명도 개선', f'{imp_fp:+.1f}%')
+    else:
+        st.warning('fingerprint_sample.png 파일이 없습니다. '
+                   '프로젝트 폴더에 지문 이미지를 추가하세요.')
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 탭 9: 로드맵
 # ══════════════════════════════════════════════════════════════════════════
 with tab6:
     st.header('개발 로드맵')
