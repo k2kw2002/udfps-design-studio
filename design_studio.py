@@ -937,23 +937,30 @@ with tab10:
 
         if has_auto_opt:
             corr_o = float(np.corrcoef(fp_2d.ravel(), sensor_opt_fp.ravel())[0, 1])
-            imp_c = (corr_c - corr_b) / max(abs(corr_b), 1e-10) * 100
-            imp_o = (corr_o - corr_b) / max(abs(corr_b), 1e-10) * 100
 
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric('기준 설계', f'{corr_b:.4f}')
-            c2.metric('현재 설계', f'{corr_c:.4f}', f'{imp_c:+.1f}%')
-            c3.metric('자동 최적 설계', f'{corr_o:.4f}', f'{imp_o:+.1f}%')
-            c4.metric('최적 vs 기준 개선', f'{imp_o:+.1f}%')
+            c1, c2, c3 = st.columns(3)
+            c1.metric('기준 설계 (상관계수)', f'{corr_b:.4f}', '기준점')
+            c2.metric('현재 설계 (슬라이더)', f'{corr_c:.4f}',
+                      f'기준 대비 {corr_c - corr_b:+.4f}')
+            c3.metric('자동 최적 설계 (AI)', f'{corr_o:.4f}',
+                      f'기준 대비 {corr_o - corr_b:+.4f}')
+
+            # 비교 테이블
+            st.markdown(f"""
+            | 설계 | 상관계수 | 기준 대비 | 비고 |
+            |------|---------|----------|------|
+            | 기준 (d=1, delta=0) | **{corr_b:.4f}** | - | baseline |
+            | 현재 (슬라이더) | **{corr_c:.4f}** | {corr_c-corr_b:+.4f} | 수동 조절 |
+            | **자동 최적 (AI)** | **{corr_o:.4f}** | **{corr_o-corr_b:+.4f}** | delta={ao_db:.1f}um |
+            """)
 
             st.caption(f'자동 최적 설계: delta_BM={ao_db:.1f}um, '
                        f'd_scales={[round(v,2) for v in ao_ds.tolist()]}')
         else:
-            imp_c = (corr_c - corr_b) / max(abs(corr_b), 1e-10) * 100
-            c1, c2, c3 = st.columns(3)
-            c1.metric('기준 설계', f'{corr_b:.4f}')
-            c2.metric('현재 설계', f'{corr_c:.4f}', f'{imp_c:+.1f}%')
-            c3.metric('개선율', f'{imp_c:+.1f}%')
+            c1, c2 = st.columns(2)
+            c1.metric('기준 설계 (상관계수)', f'{corr_b:.4f}', '기준점')
+            c2.metric('현재 설계 (슬라이더)', f'{corr_c:.4f}',
+                      f'기준 대비 {corr_c - corr_b:+.4f}')
             st.info('탭 2에서 "최적 설계 자동 탐색"을 실행하면 최적 설계 지문도 비교됩니다.')
     else:
         st.warning('fingerprint_sample.png 파일이 없습니다. '
