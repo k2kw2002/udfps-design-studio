@@ -882,26 +882,48 @@ with tab10:
         sensor_base_fp = sim_sensor(fp_2d, psf_fp_base)
         sensor_cur_fp = sim_sensor(fp_2d, psf_fp_cur)
 
+        # 자동 최적 설계도 시뮬레이션
+        has_auto_opt = 'auto_opt' in st.session_state
+        if has_auto_opt:
+            ao = st.session_state['auto_opt']
+            ao_ds = np.array(ao['d_scales'])
+            ao_db = ao['delta_bm']
+            psf_fp_opt = {}
+            for th_i in theta_fp_range:
+                ro = full_pipeline(ao_ds, ao_db, float(th_i),
+                                   w1=w1, w2=w2, coating_preset=coating_type)
+                psf_fp_opt[th_i] = ro['PSF']
+            sensor_opt_fp = sim_sensor(fp_2d, psf_fp_opt)
+
         # 시각화
         ext_fp = [-FP_FOV/2, FP_FOV/2, -FP_FOV/2, FP_FOV/2]
+        n_cols = 5 if has_auto_opt else 4
 
-        fig, axes = plt.subplots(1, 4, figsize=(18, 5))
-        fig.suptitle(f'UDFPS 센서 지문 이미지  ({coating_type}, theta={th_fp}deg)',
+        fig, axes = plt.subplots(1, n_cols, figsize=(4.5 * n_cols, 5))
+        fig.suptitle(f'UDFPS 센서 지문 이미지  ({coating_type})',
                      fontsize=14, fontweight='bold')
 
         axes[0].imshow(fp_2d, cmap='gray', extent=ext_fp, origin='lower')
         axes[0].set_title('원본 지문\n(이상적)', fontsize=12, fontweight='bold')
 
         axes[1].imshow(sensor_base_fp, cmap='gray', extent=ext_fp, origin='lower')
-        axes[1].set_title('기준 설계\n(delta=0)', fontsize=12, fontweight='bold', color='red')
+        axes[1].set_title('기준 설계\n(d=1, delta=0)', fontsize=12, fontweight='bold', color='red')
 
         axes[2].imshow(sensor_cur_fp, cmap='gray', extent=ext_fp, origin='lower')
-        axes[2].set_title('현재 설계\n(사이드바 값)', fontsize=12, fontweight='bold', color='green')
+        axes[2].set_title('현재 설계\n(사이드바 값)', fontsize=12, fontweight='bold', color='blue')
 
-        diff_fp = np.abs(sensor_cur_fp - sensor_base_fp)
-        im_d = axes[3].imshow(diff_fp, cmap='hot', extent=ext_fp, origin='lower')
-        axes[3].set_title('차이 맵', fontsize=12, fontweight='bold')
-        plt.colorbar(im_d, ax=axes[3], shrink=0.8)
+        if has_auto_opt:
+            axes[3].imshow(sensor_opt_fp, cmap='gray', extent=ext_fp, origin='lower')
+            axes[3].set_title('자동 최적 설계\n(AI 탐색 결과)', fontsize=12, fontweight='bold', color='green')
+            diff_fp = np.abs(sensor_opt_fp - sensor_base_fp)
+            im_d = axes[4].imshow(diff_fp, cmap='hot', extent=ext_fp, origin='lower')
+            axes[4].set_title('최적-기준\n차이 맵', fontsize=12, fontweight='bold')
+            plt.colorbar(im_d, ax=axes[4], shrink=0.8)
+        else:
+            diff_fp = np.abs(sensor_cur_fp - sensor_base_fp)
+            im_d = axes[3].imshow(diff_fp, cmap='hot', extent=ext_fp, origin='lower')
+            axes[3].set_title('현재-기준\n차이 맵', fontsize=12, fontweight='bold')
+            plt.colorbar(im_d, ax=axes[3], shrink=0.8)
 
         for ax in axes:
             ax.set_xlabel('x (um)')
@@ -912,13 +934,27 @@ with tab10:
         # 정량 비교
         corr_b = float(np.corrcoef(fp_2d.ravel(), sensor_base_fp.ravel())[0, 1])
         corr_c = float(np.corrcoef(fp_2d.ravel(), sensor_cur_fp.ravel())[0, 1])
-        imp_fp = (corr_c - corr_b) / max(abs(corr_b), 1e-10) * 100
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric('기준 설계 상관계수', f'{corr_b:.4f}')
-        c2.metric('현재 설계 상관계수', f'{corr_c:.4f}',
-                  f'{imp_fp:+.1f}%')
-        c3.metric('지문 선명도 개선', f'{imp_fp:+.1f}%')
+        if has_auto_opt:
+            corr_o = float(np.corrcoef(fp_2d.ravel(), sensor_opt_fp.ravel())[0, 1])
+            imp_c = (corr_c - corr_b) / max(abs(corr_b), 1e-10) * 100
+            imp_o = (corr_o - corr_b) / max(abs(corr_b), 1e-10) * 100
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric('기준 설계', f'{corr_b:.4f}')
+            c2.metric('현재 설계', f'{corr_c:.4f}', f'{imp_c:+.1f}%')
+            c3.metric('자동 최적 설계', f'{corr_o:.4f}', f'{imp_o:+.1f}%')
+            c4.metric('최적 vs 기준 개선', f'{imp_o:+.1f}%')
+
+            st.caption(f'자동 최적 설계: delta_BM={ao_db:.1f}um, '
+                       f'd_scales={[round(v,2) for v in ao_ds.tolist()]}')
+        else:
+            imp_c = (corr_c - corr_b) / max(abs(corr_b), 1e-10) * 100
+            c1, c2, c3 = st.columns(3)
+            c1.metric('기준 설계', f'{corr_b:.4f}')
+            c2.metric('현재 설계', f'{corr_c:.4f}', f'{imp_c:+.1f}%')
+            c3.metric('개선율', f'{imp_c:+.1f}%')
+            st.info('탭 2에서 "최적 설계 자동 탐색"을 실행하면 최적 설계 지문도 비교됩니다.')
     else:
         st.warning('fingerprint_sample.png 파일이 없습니다. '
                    '프로젝트 폴더에 지문 이미지를 추가하세요.')
