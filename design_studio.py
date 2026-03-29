@@ -18,17 +18,19 @@ st.set_page_config(
 )
 
 # 한글 폰트 설정 (Streamlit Cloud 호환)
-import platform, subprocess as _sp, os as _os
+import platform, os as _os
 if platform.system() != 'Windows':
-    # Linux (Streamlit Cloud): Noto Sans KR 설치
     _font_dir = _os.path.expanduser('~/.fonts')
-    if not _os.path.exists(_os.path.join(_font_dir, 'NotoSansKR-Regular.ttf')):
+    _font_path = _os.path.join(_font_dir, 'NotoSansKR.ttf')
+    if not _os.path.exists(_font_path):
         _os.makedirs(_font_dir, exist_ok=True)
-        _sp.run(['wget', '-q', '-O', _os.path.join(_font_dir, 'NotoSansKR-Regular.ttf'),
-                 'https://github.com/google/fonts/raw/main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf'],
-                check=False)
+        import urllib.request
+        urllib.request.urlretrieve(
+            'https://github.com/google/fonts/raw/main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf',
+            _font_path
+        )
         import matplotlib.font_manager as fm
-        fm.fontManager.addfont(_os.path.join(_font_dir, 'NotoSansKR-Regular.ttf'))
+        fm.fontManager.addfont(_font_path)
     plt.rcParams['font.family'] = ['Noto Sans KR', 'DejaVu Sans']
 else:
     plt.rcParams['font.family'] = ['Malgun Gothic', 'DejaVu Sans']
